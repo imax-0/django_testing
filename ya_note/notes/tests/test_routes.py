@@ -1,83 +1,62 @@
 from http import HTTPStatus
 
-from django.contrib.auth import get_user_model
-from django.test import TestCase
-from django.urls import reverse
-
-from notes.models import Note
+from .base import BaseTestCase
 
 
-User = get_user_model()
-
-
-class TestRoutes(TestCase):
+class TestRoutes(BaseTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        cls.auth_user = User.objects.create(username='test_auth_user')
-        cls.author = User.objects.create(username='test_author')
-        cls.note = Note.objects.create(
-            title='Test title',
-            text='Test text',
-            author=cls.author
+        super().setUpTestData()
+        cls.PUBLIC_URLS = (
+            cls.homepage_url,
+            cls.login_url,
+            cls.logout_url,
+            cls.signup_url,
+        )
+        cls.AUTHORIZED_URLS = (
+            cls.note_add_url,
+            cls.note_list_url,
+            cls.success_url,
+        )
+        cls.AUTHOR_URLS = (
+            cls.note_detail_url,
+            cls.note_edit_url,
+            cls.note_delete_url,
         )
 
     def test_pages_availability_for_anonymous_user(self):
-        urls = (
-            'notes:home',
-            'users:login',
-            'users:logout',
-            'users:signup',
-        )
-        for name in urls:
-            with self.subTest(name=name):
-                url = reverse(name)
+        """Проверка доступности публичных страниц анонимным пользователям"""
+        for url in self.PUBLIC_URLS:
+            with self.subTest(url=url):
                 response = self.client.get(url)
                 self.assertEqual(response.status_code, HTTPStatus.OK)
 
     def test_pages_availability_for_auth_user(self):
-        urls = (
-            'notes:add',
-            'notes:list',
-        )
-        self.client.force_login(self.auth_user)
-        for name in urls:
-            with self.subTest(name=name):
-                url = reverse(name)
-                response = self.client.get(url)
+        """Проверка доступности страниц для авторизованных пользователей"""
+        for url in self.AUTHORIZED_URLS:
+            with self.subTest(url=url):
+                response = self.not_author_client.get(url)
                 self.assertEqual(response.status_code, HTTPStatus.OK)
 
     def test_pages_availability_for_different_users(self):
-        users_statuses = (
-            (self.author, HTTPStatus.OK),
-            (self.auth_user, HTTPStatus.NOT_FOUND),
+        """
+        Проверка доступности приватных страниц авторам записей
+        и недоступности другим пользователям
+        """
+        clietns_statuses = (
+            (self.author_client, HTTPStatus.OK),
+            (self.not_author_client, HTTPStatus.NOT_FOUND),
         )
-        urls = (
-            'notes:detail',
-            'notes:edit',
-            'notes:delete',
-        )
-        for user, status in users_statuses:
-            self.client.force_login(user)
-            for name in urls:
-                with self.subTest(user=user, name=name):
-                    url = reverse(name, kwargs={'slug': self.note.slug})
-                    response = self.client.get(url)
+        for curr_client, status in clietns_statuses:
+            for url in self.AUTHOR_URLS:
+                with self.subTest(url=url):
+                    response = curr_client.get(url)
                     self.assertEqual(response.status_code, status)
 
     def test_redirect_for_anonymous_client(self):
-        urls = (
-            ('notes:add', None),
-            ('notes:list', None),
-            ('notes:success', None),
-            ('notes:detail', {'slug': self.note.slug}),
-            ('notes:edit', {'slug': self.note.slug}),
-            ('notes:delete', {'slug': self.note.slug}),
-        )
-        login_url = reverse('users:login')
-        for name, kwargs in urls:
-            with self.subTest(name=name):
-                url = reverse(name, kwargs=kwargs)
-                redirect_url = f'{login_url}?next={url}'
+        """Проверка редиректа на страницу логина анонимных пользователей"""
+        for url in self.AUTHORIZED_URLS + self.AUTHOR_URLS:
+            with self.subTest(url=url):
                 response = self.client.get(url)
-                self.assertRedirects(response, redirect_url)
+                self.assertRedirects(response, f'{self.login_url}?next={url}')

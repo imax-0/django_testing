@@ -35,49 +35,68 @@ def not_author_client(not_author):
 
 @pytest.fixture
 def news():
-    news = News.objects.create(
+    return News.objects.create(
         title='news_title',
         text='news_text'
     )
-    return news
-
-
-@pytest.fixture
-def news_id_for_args(news):
-    return (news.id, )
-
-
-@pytest.fixture
-def news_detail_url(news_id_for_args):
-    return reverse('news:detail', args=news_id_for_args)
 
 
 @pytest.fixture
 def comment(author, news):
-    comment = Comment.objects.create(
+    return Comment.objects.create(
         news=news,
         author=author,
         text='comment_text'
     )
-    return comment
 
 
 @pytest.fixture
-def comment_id_for_args(comment):
-    return (comment.id, )
+def homepage_url():
+    return reverse('news:home')
+
+
+@pytest.fixture
+def news_detail_url(news):
+    return reverse('news:detail', args=(news.id, ))
+
+
+@pytest.fixture
+def comment_edit_url(comment):
+    return reverse('news:edit', args=(comment.id, ))
+
+
+@pytest.fixture
+def comment_delete_url(comment):
+    return reverse('news:delete', args=(comment.id, ))
+
+
+@pytest.fixture
+def login_url():
+    return reverse('users:login')
+
+
+@pytest.fixture
+def logout_url():
+    return reverse('users:logout')
+
+
+@pytest.fixture
+def signup_url():
+    return reverse('users:signup')
 
 
 @pytest.fixture
 def generate_all_news():
     curr_day = datetime.today()
-    all_news = [
-        News(
-            title=f'News {idx}',
-            text='news_text',
-            date=curr_day - timedelta(days=idx)
-        ) for idx in range(settings.NEWS_COUNT_ON_HOME_PAGE)
-    ]
-    News.objects.bulk_create(all_news)
+    News.objects.bulk_create(
+        [
+            News(
+                title=f'News {idx}',
+                text='news_text',
+                date=curr_day - timedelta(days=idx)
+            ) for idx in range(settings.NEWS_COUNT_ON_HOME_PAGE)
+        ]
+    )
 
 
 @pytest.fixture
@@ -91,8 +110,3 @@ def generate_all_comments(news, author):
         )
         comment.created = now + timedelta(days=idx)
         comment.save()
-
-
-@pytest.fixture
-def comment_form_data():
-    return {'text': 'new_comment_text'}
