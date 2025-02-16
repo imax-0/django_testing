@@ -87,13 +87,13 @@ def signup_url():
 
 @pytest.fixture
 def generate_all_news():
-    curr_day = datetime.today()
+    current_day = datetime.today()
     News.objects.bulk_create(
         [
             News(
                 title=f'News {idx}',
                 text='news_text',
-                date=curr_day - timedelta(days=idx)
+                date=current_day - timedelta(days=idx)
             ) for idx in range(settings.NEWS_COUNT_ON_HOME_PAGE)
         ]
     )

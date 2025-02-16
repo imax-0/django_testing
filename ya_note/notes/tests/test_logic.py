@@ -79,10 +79,12 @@ class TestLogic(BaseTestCase):
 
     def test_other_user_cant_edit_note(self):
         """Проверка того, что пользователь не может изменить чужую запись"""
+        self.assertEqual(Note.objects.count(), 1)
         response = self.not_author_client.post(
             self.note_edit_url,
             data=self.FORM_DATA
         )
+        self.assertEqual(Note.objects.count(), 1)
         new_note = Note.objects.get(id=self.note.id)
         self.assertEqual(response.status_code, HTTPStatus.NOT_FOUND)
         self.assertEqual(new_note.title, self.note.title)
@@ -92,12 +94,16 @@ class TestLogic(BaseTestCase):
 
     def test_author_can_delete_note(self):
         """Проверка того, что автор может удалить собственную запись"""
+        self.assertEqual(Note.objects.count(), 1)
         self.author_client.post(self.note_delete_url)
+        self.assertEqual(Note.objects.count(), 0)
         self.assertFalse(Note.objects.filter(id=self.note.id).exists())
 
     def test_other_user_cant_delete_note(self):
         """Проверка того, что пользователь не может удалить чужую запись"""
+        self.assertEqual(Note.objects.count(), 1)
         response = self.not_author_client.post(self.note_delete_url)
+        self.assertEqual(Note.objects.count(), 1)
         self.assertEqual(response.status_code, HTTPStatus.NOT_FOUND)
         self.assertTrue(Note.objects.filter(id=self.note.id).exists())
         new_note = Note.objects.get(id=self.note.id)
